@@ -1,0 +1,45 @@
+{
+    "frequency": "monthly",
+    "algorithm":{
+        "name": "xgboost",
+        "models": {
+            "intermittent": "xgboost",
+            "smooth": "prophet",
+            "erratic": "xgboost",
+            "lumpy": "xgboost",
+            "new": "xgboost"
+        },
+        "cutoffs": {
+            "nzd": 0.5,
+            "cv2": 0.5,
+            "min_obs":6
+        }
+    },
+    "prophet": {
+        "growth": "auto",
+        "holidays_prior_scale": 10.0,
+        "changepoint_prior_scale": 0.05,
+        "changepoint_range": 0.8,
+        "seasonality_mode": "additive",
+        "seasonality_prior_scale": 10,
+        "uncertainty_samples": 1000,
+        "interval_width": 0.8,
+        "exogenous": ""
+    },
+    "xgboost": {
+        "model_parameters": {
+            "eta": 0.3,
+            "max_depth": 6,
+            "sampling_method": "uniform",
+            "objective": "reg:quantileerror"
+        },
+        "level_method": "mean",
+        "exogenous": {
+            "numerical": [],
+            "categorical": []
+        }
+    },
+    "probabilistic_forecast": {
+        "quantiles": []
+    }
+}
