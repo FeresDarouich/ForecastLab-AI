@@ -11,6 +11,12 @@ import pandas as pd
 
 from ..utils.hyperparameters import Hyperparameters
 from ..utils.prophet.model import ProphetModel
+from ..utils.settings import (
+    HYPERPARAMETERS_PATH,
+    MODEL_OUTPUT_PATH,
+    TRAIN_DATA_PATH,
+    ensure_directories,
+)
 from ..utils.xgboost.model import XGBoostModel
 
 
@@ -20,7 +26,6 @@ LOGGER = logging.getLogger(__name__)
 
 class Trainer:
     def __init__(self, hyperparameters: dict, logger: Optional[logging.Logger] = None) -> None:
-        """Construct a trainer instance."""
         self.logger = logger or LOGGER
         self.hyperparameters = hyperparameters
 
@@ -43,7 +48,7 @@ class Trainer:
     @classmethod
     def from_hyperparameters_file(
         cls,
-        path_to_hyperparameters_file: str | Path,
+        path_to_hyperparameters_file: str | Path = HYPERPARAMETERS_PATH,
         logger: Optional[logging.Logger] = None,
     ) -> "Trainer":
         path = Path(path_to_hyperparameters_file)
@@ -240,7 +245,7 @@ class Trainer:
     def train(self, data: pd.DataFrame) -> Dict[str, Any]:
         return self._train(data)
 
-    def train_from_file(self, data_path: str | Path) -> Dict[str, Any]:
+    def train_from_file(self, data_path: str | Path = TRAIN_DATA_PATH) -> Dict[str, Any]:
         path = Path(data_path)
         if not path.exists():
             raise FileNotFoundError(path)
@@ -254,7 +259,8 @@ class Trainer:
 
         return self.train(data)
 
-    def save_output(self, artifact: Dict[str, Any], output_path: str | Path) -> None:
+    def save_output(self, artifact: Dict[str, Any], output_path: str | Path = MODEL_OUTPUT_PATH) -> None:
+        ensure_directories()
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -286,9 +292,24 @@ class Trainer:
     @staticmethod
     def build_arg_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(description="Train forecasting model")
-        parser.add_argument("--hyperparameters", required=True, type=str, help="Path to hyperparameters json file")
-        parser.add_argument("--data", required=True, type=str, help="Path to training data file")
-        parser.add_argument("--output", required=True, type=str, help="Output path (.pkl, .csv, .parquet)")
+        parser.add_argument(
+            "--hyperparameters",
+            default=str(HYPERPARAMETERS_PATH),
+            type=str,
+            help="Path to hyperparameters json file",
+        )
+        parser.add_argument(
+            "--data",
+            default=str(TRAIN_DATA_PATH),
+            type=str,
+            help="Path to training data file",
+        )
+        parser.add_argument(
+            "--output",
+            default=str(MODEL_OUTPUT_PATH),
+            type=str,
+            help="Output artifact path",
+        )
         return parser
 
 
