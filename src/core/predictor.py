@@ -5,11 +5,17 @@ import json
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import pandas as pd
 
 from ..utils.prophet.model import ProphetModel
+from ..utils.settings import (
+    MODEL_OUTPUT_PATH,
+    PREDICTIONS_OUTPUT_PATH,
+    TEST_DATA_PATH,
+    ensure_directories,
+)
 from ..utils.xgboost.model import XGBoostModel
 
 
@@ -41,7 +47,11 @@ class Predictor:
             raise ValueError("Artifact must contain a supported algorithm: prophet or xgboost.")
 
     @classmethod
-    def from_file(cls, artifact_path: str | Path, logger: Optional[logging.Logger] = None) -> "Predictor":
+    def from_file(
+        cls,
+        artifact_path: str | Path = MODEL_OUTPUT_PATH,
+        logger: Optional[logging.Logger] = None,
+    ) -> "Predictor":
         path = Path(artifact_path)
         if not path.exists():
             raise FileNotFoundError(path)
@@ -210,9 +220,6 @@ class Predictor:
         return result[ordered]
 
     def _predict_xgboost(self, data: pd.DataFrame) -> pd.DataFrame:
-        if data is None:
-            raise ValueError("XGBoost prediction requires input data.")
-
         model = self._get_first_model()
         expected_columns = self._get_xgb_feature_names(model)
         features = self._build_xgboost_features(data.copy(), expected_columns=expected_columns or None)
@@ -243,14 +250,15 @@ class Predictor:
 
     def predict_from_file(
         self,
-        data_path: Optional[str | Path] = None,
+        data_path: Optional[str | Path] = TEST_DATA_PATH,
         periods: Optional[int] = None,
         include_history: bool = False,
     ) -> pd.DataFrame:
         data = self._read_data(data_path) if data_path else None
         return self.predict(data=data, periods=periods, include_history=include_history)
 
-    def save_predictions(self, predictions: pd.DataFrame, output_path: str | Path) -> None:
+    def save_predictions(self, predictions: pd.DataFrame, output_path: str | Path = PREDICTIONS_OUTPUT_PATH) -> None:
+        ensure_directories()
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -276,15 +284,30 @@ class Predictor:
     @staticmethod
     def build_arg_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(description="Run predictions from a trained artifact")
-        parser.add_argument("--artifact", required=True, type=str, help="Path to trained artifact (.pkl)")
-        parser.add_argument("--data", type=str, help="Path to prediction input (.csv or .parquet)")
+        parser.add_argument(
+            "--artifact",
+            default=str(MODEL_OUTPUT_PATH),
+            type=str,
+            help="Path to trained artifact (.pkl)",
+        )
+        parser.add_argument(
+            "--data",
+            default=str(TEST_DATA_PATH),
+            type=str,
+            help="Path to prediction input (.csv or .parquet)",
+        )
         parser.add_argument("--periods", type=int, help="Future periods for Prophet prediction")
         parser.add_argument(
             "--include-history",
             action="store_true",
-            help="Include training history when generating Prophet future predictions",
+            help="Include training history for Prophet predictions",
         )
-        parser.add_argument("--output", required=True, type=str, help="Output path (.csv, .parquet, .pkl)")
+        parser.add_argument(
+            "--output",
+            default=str(PREDICTIONS_OUTPUT_PATH),
+            type=str,
+            help="Output predictions path",
+        )
         return parser
 
 
