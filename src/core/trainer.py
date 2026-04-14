@@ -100,6 +100,22 @@ class Trainer:
         raw = dict((self.xgb_hyperparameters or {}).get("model_parameters", {}) or {})
         if "eta" in raw and "learning_rate" not in raw:
             raw["learning_rate"] = raw.pop("eta")
+
+        if raw.get("objective") == "reg:quantileerror":
+            quantiles = list((self.probabilistic_forecast or {}).get("quantiles", []))
+            level_method = str((self.xgb_hyperparameters or {}).get("level_method", "median")).strip().lower()
+
+            if quantiles:
+                raw.setdefault("quantile_alpha", quantiles[0] if len(quantiles) == 1 else quantiles)
+            elif level_method == "median":
+                raw.setdefault("quantile_alpha", 0.5)
+            else:
+                self.logger.info(
+                    "XGBoost objective 'reg:quantileerror' requested without quantiles; "
+                    "falling back to 'reg:squarederror' for point forecasts."
+                )
+                raw["objective"] = "reg:squarederror"
+
         return raw
 
     def _build_xgboost_features(self, data: pd.DataFrame) -> pd.DataFrame:
