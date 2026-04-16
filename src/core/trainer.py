@@ -18,6 +18,7 @@ from ..utils.settings import (
     ensure_directories,
 )
 from ..utils.xgboost.model import XGBoostModel
+from utils.modeling import model_selection
 
 
 logging.basicConfig(level=logging.INFO)
@@ -61,14 +62,11 @@ class Trainer:
             "monthly": "MS",
         }[self.frequency]
 
-    def _resolve_algorithm(self, data: pd.DataFrame) -> str:
+    def _resolve_algorithm(self, series: pd.series) -> str:
         if self.algorithm != "auto":
             return self.algorithm
 
-        selected = str((self.models or {}).get("smooth", "prophet")).strip().lower()
-        if selected not in ["prophet", "xgboost"]:
-            selected = "prophet"
-
+        selected = str(model_selection(series, self.cutoffs, self.models)).strip().lower()
         self.logger.info("Algorithm set to auto. Resolved to '%s'.", selected)
         return selected
 
