@@ -18,7 +18,7 @@ from ..utils.settings import (
     ensure_directories,
 )
 from ..utils.xgboost.model import XGBoostModel
-from utils.modeling import model_selection
+from ..utils.modeling import model_selection
 
 
 logging.basicConfig(level=logging.INFO)
@@ -212,7 +212,7 @@ class Trainer:
             forecast_list.append(forecast)
 
         artifact["predictions"] = pd.concat(forecast_list + list(forecast), ignore_index=True)
-        
+
         return artifact
 
     def train(self, data: pd.DataFrame) -> Dict[str, Any]:
