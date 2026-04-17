@@ -135,8 +135,30 @@ class Trainer:
         encoded = encoder.fit_transform(data[[column]], data["y"])
         return encoded
     
+    def parse_seasonality(self,seas: str, freq: str) -> list[tuple]:
+        if seas.lower() == "auto":
+            defaults = {
+                "daily": [(365,5), (30.5,3), (7,2)],
+                "weekly": [(52,5), (4.5,2)],
+                "monthly": [(12, 3)],
+            }
+            return defaults[freq]
+        else:
+            terms = []
+            seas_terms = seas.split(",")
+            if seas_terms:
+                seasonalities = [seasonality.split("-") for seasonality in seas_terms]
+                for s in seasonalities:
+                    try:
+                        period, n_component = s
+                        terms.append(float(period), int(n_component))
+                    except:
+                        raise ValueError("Seasonalities values schema is incorrect!!")
+            return terms
+
+
     def apply_seaonality(self, data: pd.DataFrame) -> pd.DataFrame:
-        
+        seasonality = self.parse_seasonality(self.seasonality, self.frequency)
 
     def _build_xgboost_features(self, data: pd.DataFrame) -> pd.DataFrame:
         exogenous = (self.xgb_hyperparameters or {}).get("exogenous", {}) or {}
