@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import pandas as pd
+import numpy as np
 
 from .prepare import Prepare
 from ..utils.prophet.model import ProphetModel
@@ -135,14 +136,14 @@ class Trainer:
         encoded = encoder.fit_transform(data[[column]], data["y"])
         return encoded
     
-    def parse_seasonality(self,seas: str, freq: str) -> list[tuple]:
+    def parse_seasonality(self,seas: str) -> list[tuple]:
         if seas.lower() == "auto":
             defaults = {
                 "daily": [(365,5), (30.5,3), (7,2)],
                 "weekly": [(52,5), (4.5,2)],
                 "monthly": [(12, 3)],
             }
-            return defaults[freq]
+            return defaults[self.frequency]
         else:
             terms = []
             seas_terms = seas.split(",")
@@ -155,10 +156,44 @@ class Trainer:
                     except:
                         raise ValueError("Seasonalities values schema is incorrect!!")
             return terms
+        
+    def compute_fourier(self, data: pd.DataFrame, period: float, term: int) -> pd.DataFrame:
+        data["ds"] = pd.to_datetime(data["ds"])
+        ds = data["ds"].drop_duplicates().reset_index(drop=True)
+        if self.frequency == "monthly":
+            t = (ds.dt.to_period("M").astype(int) - ds.dt.to_period("M").astype(int).min())/period
+        elif self.frequency == "weekly":
+            t = (ds.dt.to_period("W").astype(int) - ds.dt.to_period("W").astype(int).min())/period
+        elif self.frequency == "daily":
+            t = (ds - ds.min()).dt.days / period
+        else: 
+            raise ValueError("Unable to compute fourier terms. unsupported frequency !!")
+        fourier_cos = np.zeros(len(ds))
+        fourier_sin = np.zeros(len(ds))
+        fourier_cos += np.cos(2 * np.pi * term * t)
+        fourier_sin += np.sin(2 * np.pi * term * t)
+        F_component = pd.DataFrame(
+            {"ds": ds, "fourier_cos": fourier_cos, "fourier_sin": fourier_sin}
+        )
+        return F_component
+
+    def add_seasonality(self, seasonality: list, data: pd.DataFrame) -> pd.DataFrame:
+        if len(seasonality) != 0:
+            for seas in seasonality:
+                for term in range(1, seas[1] + 1):
+                    name = "seasonality_" + str(seas[0]) + "_component_" + str(term)
+                    F_compoent = self.compute_fourier(data, period= seas[0], term= term) 
+                    data[name + "_cos"] = data["ds"].map(F_compoent.set_index("ds")["fourier_cos"])
+                    data[name + "_sin"] = data["ds"].map(F_compoent.set_index("ds")["fourier_sin"])
+        else: 
+            pass
+        return data
 
 
     def apply_seaonality(self, data: pd.DataFrame) -> pd.DataFrame:
-        seasonality = self.parse_seasonality(self.seasonality, self.frequency)
+        seasonalities = self.parse_seasonality(self.seasonality)
+        data = self.add_seasonality(seasonalities, data)
+
 
     def _build_xgboost_features(self, data: pd.DataFrame) -> pd.DataFrame:
         exogenous = (self.xgb_hyperparameters or {}).get("exogenous", {}) or {}
