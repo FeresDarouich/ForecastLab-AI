@@ -203,7 +203,7 @@ class Trainer:
         features = self.apply_level(data.copy(), level_method)
         for col in categorical:
             features[col] = self.apply_encoding(features.copy(), col)
-        features = features.self.apply_seasonality(data.copy())
+        features = self.apply_seasonality(data.copy())
         return features
 
     def apply_prophet_model(self, group: pd.DataFrame) -> pd.DataFrame:
