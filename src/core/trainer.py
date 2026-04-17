@@ -125,10 +125,10 @@ class Trainer:
         elif method not in ["mean", "median"]:
             raise ValueError(f"level method {method} is not supported !!")
         else:
-            level_map = tr.groupby("TSId")["y"].transform(method).to_dict()
+            level_map = tr.groupby("TSId")["y"].agg(method).to_dict()
             tr["level"] = tr["TSId"].map(level_map)
             ts["level"] = tr["TSId"].map(level_map)
-            ts["level"] = ts["level"].fillna(tr["y"].transform(method))
+            ts["level"] = ts["level"].fillna(tr["y"].agg(method))
         return pd.concat([tr,ts], ignore_index=True)
     
     def apply_encoding(self, data: pd.DataFrame, column: str) -> pd.Series:
