@@ -190,7 +190,7 @@ class Trainer:
         return data
 
 
-    def apply_seaonality(self, data: pd.DataFrame) -> pd.DataFrame:
+    def apply_seasonality(self, data: pd.DataFrame) -> pd.DataFrame:
         seasonalities = self.parse_seasonality(self.seasonality)
         data = self.add_seasonality(seasonalities, data)
 
