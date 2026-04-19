@@ -89,7 +89,7 @@ Key fields:
 - `xgboost.model_parameters`: raw XGBoost regressor parameters
 - `xgboost.level_method`: currently `mean` or `median`
 - `xgboost.exogenous`: optional numerical and categorical columns
-- `probabilistic_forecast.quantiles`: optional quantiles for quantile loss
+- `probabilistic_forecast.quantiles`: optional quantiles
 - `seasonality`: `auto` or a custom seasonality definition
 
 Current sample config defaults to monthly frequency with XGBoost.
@@ -137,16 +137,6 @@ poetry run python main.py predict \
 	--data input/data/test/test.csv \
 	--output output/predictions.csv
 ```
-
-## Current Prediction Behavior
-
-The current workflow generates predictions during training and stores them inside the saved artifact.
-
-- `trainer.py` creates the predictions dataframe and saves it in the artifact under `predictions`.
-- `predictor.py` performs inference by loading those stored predictions and optionally filtering them to the rows requested in the input file, typically by `TSId` and `ds`.
-- The CLI still accepts `--periods` and `--include-history`, but they are currently ignored because predictor execution does not run the underlying forecasting model again.
-
-This means `predict` is best understood as artifact-backed inference/export, not model re-scoring from scratch.
 
 ## Outputs
 
